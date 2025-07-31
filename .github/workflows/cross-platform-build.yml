@@ -1,0 +1,56 @@
+name: Cross platform mangling check
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        compiler: [g++, clang++, cl]
+        exclude:
+          - os: ubuntu-latest
+            compiler: cl
+          - os: macos-latest
+            compiler: cl
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Build with MSVC
+      if: matrix.compiler == 'cl'
+      shell: cmd
+      run: |
+        call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+        cl /EHsc /Fe:main.exe main.cpp
+
+    - name: Build
+      if: matrix.compiler != 'cl'
+      shell: bash
+      run: |
+        if [[ "${{ runner.os }}" == "Windows" ]]; then
+          ${{ matrix.compiler }} main.cpp -o main.exe
+          ls
+        else
+          ${{ matrix.compiler }} main.cpp -o main
+          ls
+        fi
+
+    - name: Inspect name mangling via nm (Windows)
+      if: runner.os == 'Windows'
+      shell: pwsh
+      run: |
+        ls
+        nm main.exe | Select-String "print"
+
+    - name: Inspect name mangling via nm (Unix)
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        nm main | grep "print"
