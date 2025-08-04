@@ -12,49 +12,48 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        compiler: [g++, clang++, cl]
-        build_type: [Debug]
-        exclude:
+        include:
           - os: ubuntu-latest
-            compiler: cl
+            compiler: g++
           - os: macos-latest
+            compiler: clang++
+          - os: windows-latest
             compiler: cl
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set executable name
-      id: exe
-      shell: bash
-      run: |
-        if [[ "${{ runner.os }}" == "Windows" ]]; then
-          echo "name=main.exe" >> "$GITHUB_OUTPUT"
-        else
-          echo "name=main" >> "$GITHUB_OUTPUT"
-        fi
+      - name: Set executable name
+        id: exe
+        shell: bash
+        run: |
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            echo "name=main.exe" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=main" >> "$GITHUB_OUTPUT"
+          fi
 
-    - name: Set reusable strings
-      id: strings
-      shell: bash
-      run: echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+      - name: Set reusable strings
+        id: strings
+        shell: bash
+        run: echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
 
-    - name: Configure CMake
-      shell: bash
-      run: |
-        if [[ "$RUNNER_OS" == "Windows" ]]; then
-          cmake -S . -B "$(cygpath -u "${{ steps.strings.outputs.build-output-dir }}")" -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-        else
-          cmake -S . -B ${{ steps.strings.outputs.build-output-dir }} \
-                -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} \
-                -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-        fi
+      - name: Configure CMake
+        shell: bash
+        run: |
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            cmake -S . -B "$(cygpath -u "${{ steps.strings.outputs.build-output-dir }}")" -DCMAKE_BUILD_TYPE=Debug
+          else
+            cmake -S . -B ${{ steps.strings.outputs.build-output-dir }} \
+                  -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} \
+                  -DCMAKE_BUILD_TYPE=Debug
+          fi
 
-    - name: Build and Run
-      shell: bash
-      run: |
-        if [[ "$RUNNER_OS" == "Windows" ]]; then
-          cmake --build "$(cygpath -u "${{ steps.strings.outputs.build-output-dir }}")" --config ${{ matrix.build_type }}
-        else
-          cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }}
-        fi
+      - name: Build and Run
+        shell: bash
+        run: |
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            cmake --build "$(cygpath -u "${{ steps.strings.outputs.build-output-dir }}")" --config Debug
+          else
+            cmake --build ${{ steps.strings.outputs.build-output-dir }} --config Debug
+          fi
